@@ -75,13 +75,15 @@
   - `/api/analyze-keyword`에서 타겟 키워드와 상위글 핵심 테마를 기반으로 한 16:9 비율 고품질 시네마틱 이미지 생성 프롬프트 자동 조립
 ---
 
-## 11. 프로젝트 저장 위치 D드라이브 이전 완료 & 작동 검증
-- **요청 20**: 프로젝트 전체를 D드라이브로 이동 후 정상 작동 테스트 요청
-- **새 저장 위치**: `D:\blog-trend-dashboard`
-- **검증 결과**:
-  1. 전체 코드, 프론트엔드 UI, 스킬스 규격(`SKILL.md`), 마스터 지침서 안전 복사 완료
-  2. `D:\blog-trend-dashboard` 경로에서 npm 의존성 재설치 및 Node.js 서버 프로세스 정상 기동
-  3. 대시보드 메인(`http://localhost:3000`), 멀티브라우저(`http://localhost:3000/multi`), 키워드 분석 API 정상 200 OK 응답 검증 완료
+## 12. Render.com 전 세계 무료 클라우드 배포 완료 (최종 성공!)
+- **공식 전 세계 접속 웹사이트 주소**:
+  - **키워드 대시보드 & 글작성**: `https://blog-trend-dashboard.onrender.com`
+  - **멀티 브라우저 & 나만의 바로가기**: `https://blog-trend-dashboard.onrender.com/multi`
+- **배포 인프라 및 상태**:
+  - **Host**: Render.com (Free Web Service)
+  - **상태**: `STATUS: Deploy succeeded | Live` (HTTP 200 OK 정상 동작)
+  - **특징**: 사용자의 로컬 컴퓨터 전원을 꺼도 24시간 언제 어디서나 스마트폰, 태블릿, 외부 PC에서 무설치로 접속 가능
+
 
 
 
