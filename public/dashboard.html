@@ -1159,7 +1159,7 @@ function renderDashboard(data) {
 
         const keywordsHtml = source.keywords.length > 0 ?
             source.keywords.map((kw, i) => `
-                <div class="keyword-item" onclick="searchNaver('${escapeHtml(kw.keyword)}')">
+                <div class="keyword-item" data-keyword="${escapeHtml(kw.keyword)}" onclick="showKeywordPopover(event, this.getAttribute('data-keyword'))">
                     <span class="rank ${i < 3 ? 'top3' : 'normal'}">${kw.rank || i + 1}</span>
                     <span class="keyword-text">
                         ${escapeHtml(kw.keyword)}
@@ -1241,7 +1241,8 @@ function renderCombinedKeywords(sources) {
 
     container.innerHTML = unique.slice(0, 40).map((kw, i) => `
         <span class="keyword-tag" style="border-color:${kw.color}30" 
-              onclick="showKeywordPopover(event, '${escapeHtml(kw.keyword)}')"
+              data-keyword="${escapeHtml(kw.keyword)}"
+              onclick="showKeywordPopover(event, this.getAttribute('data-keyword'))"
               title="${kw.source}">
             <span class="tag-rank" style="color:${kw.color}">#${i + 1}</span>
             ${escapeHtml(kw.keyword)}
@@ -1592,9 +1593,13 @@ function searchNaver(keyword) {
 }
 
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 let latestKeywords = [];
