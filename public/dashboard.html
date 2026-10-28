@@ -964,7 +964,9 @@
                 <div class="analysis-card" style="margin-bottom:0;">
                     <div class="analysis-card-title" style="justify-content:space-between">
                         <span>📋 젬스(Gems) 전송용 데이터 팩 (미리보기)</span>
-                        <button onclick="copyDataPackOnly()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;">복사</button>
+                        <button class="btn-img-prompt" id="btnCopyDataPack" onclick="copyDataPackOnly()" style="background:rgba(0,212,255,0.15);border-color:rgba(0,212,255,0.4);color:var(--accent);" title="데이터 팩 전체 복사">
+                            📋 복사하기
+                        </button>
                     </div>
                     <pre id="modalDataPack" style="background:rgba(0,0,0,0.4);padding:10px;border-radius:6px;font-size:11px;color:#cbd5e1;white-space:pre-wrap;max-height:160px;overflow-y:auto;font-family:monospace;margin:0;"></pre>
                 </div>
@@ -1003,13 +1005,13 @@
             </div>
             
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <!-- 젬스로 글작성 시작 (슬림화) -->
-                <button class="btn-gems-action" onclick="executeGemsWrite()" title="데이터 팩 복사 & 젬스 창 열기 (창은 유지됨)">
-                    🚀 젬스 글작성 ↗
+                <!-- 젬스로 글작성 시작 (창만 열림) -->
+                <button class="btn-gems-action" onclick="executeGemsWrite()" title="선택한 젬스 창 열기">
+                    🚀 젬스 열기 ↗
                 </button>
 
                 <!-- AI 플랫폼 슬라이스 이동 버튼 (GPT, GROK, Claude) -->
-                <div class="ai-slice-group" title="데이터 팩 복사 & 다른 AI 플랫폼에서 작성">
+                <div class="ai-slice-group" title="해당 AI 플랫폼 창 열기">
                     <button class="ai-slice-btn gpt" onclick="executeOtherAiWrite('https://chatgpt.com')">
                         GPT ↗
                     </button>
@@ -1461,8 +1463,23 @@ function closeAnalysisModal() {
 
 function copyDataPackOnly() {
     if (!currentAnalysisData || !currentAnalysisData.dataPack) return;
+    const btn = document.getElementById('btnCopyDataPack');
+    const originalText = btn ? btn.innerHTML : '📋 복사하기';
+
     navigator.clipboard.writeText(currentAnalysisData.dataPack).then(() => {
-        alert('📋 젬스 전송용 데이터 팩이 클립보드에 복사되었습니다!');
+        if (btn) {
+            btn.innerHTML = '✅ 복사완료!';
+            btn.style.background = '#10b981';
+            btn.style.color = '#fff';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = 'rgba(0,212,255,0.15)';
+                btn.style.color = 'var(--accent)';
+            }, 2000);
+        }
+        showToast('📋 <strong>젬스 전송용 데이터 팩</strong>이 클립보드에 복사되었습니다!');
+    }).catch(() => {
+        prompt('아래 데이터 팩을 복사하세요:', currentAnalysisData.dataPack);
     });
 }
 
@@ -1551,41 +1568,26 @@ function copySingleImagePrompt(num) {
     });
 }
 
-// 🚀 젬스로 글작성 시작 (팝업 차단 방지를 위해 즉시 창 열기 + 클립보드 복사)
+// 🚀 젬스 창 열기 (클립보드 복사 없이 창만 열기)
 function executeGemsWrite() {
-    if (!currentAnalysisData || !currentAnalysisData.dataPack) return;
-
     const select = document.getElementById('modalGemsSelect');
-    const selectedIdx = select.value;
+    const selectedIdx = select ? select.value : 0;
     const selectedGem = userGems[selectedIdx] || { name: 'Gemini', url: 'https://gemini.google.com/app' };
 
-    // 1. 브라우저 팝업 차단 방지를 위해 즉시 새 탭 오픈
-    const newTab = window.open(selectedGem.url, '_blank');
-
-    // 2. 데이터 팩 클립보드 복사 & 부드러운 토스트 안내
-    navigator.clipboard.writeText(currentAnalysisData.dataPack).then(() => {
-        showToast(`✅ [${selectedGem.name}]로 이동했습니다! Ctrl+V로 붙여넣기 하세요.`);
-    }).catch(() => {
-        showToast(`✅ [${selectedGem.name}] 창이 열렸습니다.`);
-    });
+    // 1. 새 탭 오픈
+    window.open(selectedGem.url, '_blank');
+    showToast(`🚀 [${selectedGem.name}] 창이 열렸습니다.`);
 }
 
-// 🌐 다른 AI 플랫폼(ChatGPT, Grok, Claude) 슬라이스 실행
+// 🌐 다른 AI 플랫폼(ChatGPT, Grok, Claude) 창 열기 (창만 열기)
 function executeOtherAiWrite(aiUrl) {
-    if (!currentAnalysisData || !currentAnalysisData.dataPack) return;
-
     let aiName = 'AI 플랫폼';
     if (aiUrl.includes('chatgpt')) aiName = 'ChatGPT';
     else if (aiUrl.includes('grok')) aiName = 'GROK';
     else if (aiUrl.includes('claude')) aiName = 'Claude';
 
-    const newTab = window.open(aiUrl, '_blank');
-
-    navigator.clipboard.writeText(currentAnalysisData.dataPack).then(() => {
-        showToast(`✅ [${aiName}]로 이동했습니다! Ctrl+V로 붙여넣기 하세요.`);
-    }).catch(() => {
-        showToast(`✅ [${aiName}] 창이 열렸습니다.`);
-    });
+    window.open(aiUrl, '_blank');
+    showToast(`🌐 [${aiName}] 창이 열렸습니다.`);
 }
 
 function searchNaver(keyword) {
