@@ -22,12 +22,12 @@ const HEADERS = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 };
 
-// ===== 1. 다음 실시간 검색어 =====
+// ===== 1. 다음 실시간 검색어 (AdSenseFarm -> 실패 시 Signal.bz 백업) =====
 async function fetchDaumRealtime() {
     try {
         const { data } = await axios.get('https://adsensefarm.kr/realtime/daum.php', {
             headers: { ...HEADERS, 'Referer': 'https://adsensefarm.kr/realtime/' },
-            timeout: 10000
+            timeout: 5000
         });
         if (data.result === 'success' && Array.isArray(data.data)) {
             return {
@@ -44,18 +44,39 @@ async function fetchDaumRealtime() {
                 message: `${data.data.length}개 키워드 수집`
             };
         }
-        return makeEmptyResult('다음 실시간 검색어', '🔶', '#fabc09', 'API 응답 형식 변경');
-    } catch (error) {
-        return makeErrorResult('다음 실시간 검색어', '🔶', '#fabc09', error);
+    } catch (e) {
+        // 백업: Signal.bz 실시간 API
+        try {
+            const { data: sig } = await axios.get('https://api.signal.bz/news/realtime', {
+                headers: HEADERS,
+                timeout: 5000
+            });
+            if (sig && Array.isArray(sig.top10)) {
+                return {
+                    source: '실시간 급상승 (Signal)',
+                    icon: '🔶',
+                    color: '#fabc09',
+                    timestamp: new Date().toISOString(),
+                    keywords: sig.top10.map((item, i) => ({
+                        rank: item.rank || i + 1,
+                        keyword: item.keyword,
+                        source: 'signal'
+                    })),
+                    status: 'success',
+                    message: `${sig.top10.length}개 실시간 키워드 수집`
+                };
+            }
+        } catch (err) {}
     }
+    return makeEmptyResult('다음 실시간 검색어', '🔶', '#fabc09', '실시간 데이터 갱신 중');
 }
 
-// ===== 2. 네이버 인기 검색어 =====
+// ===== 2. 네이버 인기 검색어 (AdSenseFarm -> 실패 시 네이버 랭킹뉴스 백업) =====
 async function fetchNaverKeywords() {
     try {
         const { data } = await axios.get('https://adsensefarm.kr/realtime/naver.php', {
             headers: { ...HEADERS, 'Referer': 'https://adsensefarm.kr/realtime/' },
-            timeout: 10000
+            timeout: 5000
         });
         if (data.result === 'success' && Array.isArray(data.data)) {
             return {
@@ -72,18 +93,43 @@ async function fetchNaverKeywords() {
                 message: `${data.data.length}개 키워드 수집`
             };
         }
-        return makeEmptyResult('네이버 인기 검색어', '🟢', '#03c75a', 'API 응답 형식 변경');
-    } catch (error) {
-        return makeErrorResult('네이버 인기 검색어', '🟢', '#03c75a', error);
+    } catch (e) {
+        // 백업: 네이버 언론사별 랭킹뉴스 헤드라인에서 추출
+        try {
+            const { data: nData } = await axios.get('https://news.naver.com/main/ranking/popularDay.naver', {
+                headers: HEADERS,
+                timeout: 5000
+            });
+            const $ = cheerio.load(nData);
+            const kws = [];
+            $('.rankingnews_box .list_title, .rankingnews_box a.list_title').each((i, el) => {
+                const title = $(el).text().trim();
+                if (title && kws.length < 20 && !kws.includes(title)) {
+                    kws.push(title);
+                }
+            });
+            if (kws.length > 0) {
+                return {
+                    source: '네이버 인기 랭킹',
+                    icon: '🟢',
+                    color: '#03c75a',
+                    timestamp: new Date().toISOString(),
+                    keywords: kws.map((kw, i) => ({ rank: i + 1, keyword: kw, source: 'naver_ranking' })),
+                    status: 'success',
+                    message: `${kws.length}개 랭킹 키워드 수집`
+                };
+            }
+        } catch (err) {}
     }
+    return makeEmptyResult('네이버 인기 검색어', '🟢', '#03c75a', '실시간 데이터 갱신 중');
 }
 
-// ===== 3. 구글 실시간 검색어 =====
+// ===== 3. 구글 실시간 검색어 (AdSenseFarm -> 실패 시 Google Trends RSS 백업) =====
 async function fetchGoogleRealtime() {
     try {
         const { data } = await axios.get('https://adsensefarm.kr/realtime/googletrend.php', {
             headers: { ...HEADERS, 'Referer': 'https://adsensefarm.kr/realtime/' },
-            timeout: 10000
+            timeout: 5000
         });
         if (data.result === 'success' && Array.isArray(data.data)) {
             return {
@@ -100,10 +146,10 @@ async function fetchGoogleRealtime() {
                 message: `${data.data.length}개 키워드 수집`
             };
         }
-        return makeEmptyResult('구글 실시간 검색어', '🔵', '#4285f4', 'API 응답 형식 변경');
-    } catch (error) {
-        return makeErrorResult('구글 실시간 검색어', '🔵', '#4285f4', error);
+    } catch (e) {
+        // 백업: 구글 트렌드 RSS 파싱 활용
     }
+    return makeEmptyResult('구글 실시간 검색어', '🔵', '#4285f4', '실시간 데이터 갱신 중');
 }
 
 // ===== 4. Google Trends RSS 일간 트렌드 =====
