@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const iconv = require('iconv-lite');
 const path = require('path');
 const os = require('os');
 
@@ -94,13 +95,15 @@ async function fetchNaverKeywords() {
             };
         }
     } catch (e) {
-        // 백업: 네이버 언론사별 랭킹뉴스 헤드라인에서 추출
+        // 백업: 네이버 언론사별 랭킹뉴스 헤드라인에서 추출 (EUC-KR 디코딩 적용)
         try {
-            const { data: nData } = await axios.get('https://news.naver.com/main/ranking/popularDay.naver', {
+            const res = await axios.get('https://news.naver.com/main/ranking/popularDay.naver', {
                 headers: HEADERS,
+                responseType: 'arraybuffer',
                 timeout: 5000
             });
-            const $ = cheerio.load(nData);
+            const decodedHtml = iconv.decode(res.data, 'euc-kr');
+            const $ = cheerio.load(decodedHtml);
             const kws = [];
             $('.rankingnews_box .list_title, .rankingnews_box a.list_title').each((i, el) => {
                 const title = $(el).text().trim();
@@ -147,7 +150,30 @@ async function fetchGoogleRealtime() {
             };
         }
     } catch (e) {
-        // 백업: 구글 트렌드 RSS 파싱 활용
+        // 백업: Google Trends RSS 파싱 결과 활용
+        try {
+            const { data: rssData } = await axios.get('https://trends.google.com/trending/rss?geo=KR', {
+                headers: HEADERS,
+                timeout: 5000
+            });
+            const $ = cheerio.load(rssData, { xmlMode: true });
+            const gKws = [];
+            $('item').each((i, el) => {
+                const title = $(el).find('title').text().trim();
+                if (title && !gKws.includes(title)) gKws.push(title);
+            });
+            if (gKws.length > 0) {
+                return {
+                    source: '구글 실시간 트렌드',
+                    icon: '🔵',
+                    color: '#4285f4',
+                    timestamp: new Date().toISOString(),
+                    keywords: gKws.slice(0, 15).map((kw, i) => ({ rank: i + 1, keyword: kw, source: 'google_rss' })),
+                    status: 'success',
+                    message: `${Math.min(gKws.length, 15)}개 구글 키워드 수집`
+                };
+            }
+        } catch (err) {}
     }
     return makeEmptyResult('구글 실시간 검색어', '🔵', '#4285f4', '실시간 데이터 갱신 중');
 }
