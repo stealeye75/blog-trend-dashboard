@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>블로그 트렌드 멀티 브라우저</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --accent: #00d4ff;
+            --accent2: #7c3aed;
+            --accent3: #f59e0b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --sidebar-width: 280px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .layout-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .layout-btn {
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .layout-btn:hover, .layout-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .open-all-btn {
+            padding: 6px 16px;
+            background: linear-gradient(135deg, var(--accent2), #9333ea);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .open-all-btn:hover { transform: scale(1.05); }
+
+        .toggle-sidebar-btn {
+            padding: 6px 14px;
+            background: #1e293b;
+            color: var(--accent);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .toggle-sidebar-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        /* Tab Bar */
+        .tab-bar {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            height: 42px;
+            flex-shrink: 0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.03); }
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .tab .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* Workspace Wrapper (Main View + Right Sidebar) */
+        .workspace {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 98px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Single Tab View */
+        .tab-panel {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        .tab-panel.active { display: flex; flex-direction: column; }
+
+        .tab-panel iframe {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Grid Layout */
+        .grid-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+
+        .grid-container.active { display: grid; }
+
+        .grid-2x2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; }
+        .grid-3x2 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr; gap: 2px; }
+        .grid-horizontal { grid-template-columns: repeat(5, 1fr); grid-template-rows: 1fr; gap: 2px; }
+
+        .grid-cell {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .grid-cell-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .grid-cell-header .site-name {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .grid-cell-header .open-btn {
+            padding: 3px 10px;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .grid-cell iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+        }
+
+        /* Panel Info Bar */
+        .panel-info-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .panel-info-bar .site-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-info-bar .site-info .dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+        }
+
+        .panel-info-bar .url-display {
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .panel-info-bar .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .panel-info-bar .action-btns a, .panel-info-bar .action-btns button {
+            padding: 5px 14px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .panel-info-bar .action-btns a:hover, .panel-info-bar .action-btns button:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        /* ===== Right Bookmark Sidebar ===== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: margin-right 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            margin-right: calc(-1 * var(--sidebar-width));
+        }
+
+        .sidebar-header {
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar-header h3 {
+            font-size: 14px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sidebar-add-form {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-add-form input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .sidebar-add-form input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .sidebar-add-btn {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .sidebar-add-btn:hover { opacity: 0.9; }
+
+        .bookmark-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .bookmark-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .bookmark-item:hover {
+            border-color: var(--accent);
+            transform: translateX(-2px);
+        }
+
+        .bookmark-info {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+        }
+
+        .bookmark-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bookmark-url {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bookmark-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .bookmark-action-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .bookmark-action-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .bookmark-action-btn.delete:hover {
+            color: #ef4444;
+            background: rgba(239,68,68,0.1);
+        }
+
+        /* Clock */
+        .clock {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1><span>📊</span> 블로그 트렌드 멀티 브라우저</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div class="clock" id="clock"></div>
+        <div class="layout-controls">
+            <button class="layout-btn active" onclick="setLayout('tabs')" title="탭 모드">📑 탭</button>
+            <button class="layout-btn" onclick="setLayout('grid-2x2')" title="2x2 그리드">⊞ 2×2</button>
+            <button class="layout-btn" onclick="setLayout('grid-3x2')" title="3x2 그리드">⊞ 3×2</button>
+            <button class="layout-btn" onclick="setLayout('grid-horizontal')" title="가로 분할">▥ 가로</button>
+        </div>
+        <button class="open-all-btn" onclick="openAll()">🚀 전체 새 탭 열기</button>
+        <button class="toggle-sidebar-btn" onclick="toggleSidebar()">
+            ⭐ 바로가기 패널
+        </button>
+    </div>
+</div>
+
+<div class="tab-bar" id="tabBar">
+    <!-- Generated by JS -->
+</div>
+
+<div class="workspace">
+    <!-- Main Viewer Area -->
+    <div class="main-content" id="mainContent">
+        <!-- Tab panels and grid generated by JS -->
+    </div>
+
+    <!-- Right Favorites / Bookmarks Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>⭐ 나만의 바로가기</h3>
+            <span style="font-size:11px;color:var(--text-secondary)" id="bookmarkCount">0개</span>
+        </div>
+
+        <!-- Add Form -->
+        <div class="sidebar-add-form">
+            <input type="text" id="bmName" placeholder="사이트 이름 (예: 네이버 키워드도구)" />
+            <input type="text" id="bmUrl" placeholder="https://..." />
+            <button class="sidebar-add-btn" onclick="addBookmark()">+ 바로가기 추가</button>
+        </div>
+
+        <!-- Bookmarks List -->
+        <div class="bookmark-list" id="bookmarkList">
+            <!-- Rendered by JS -->
+        </div>
+
+        <!-- 🔮 Gems Connection Section -->
+        <div style="border-top:1px solid var(--border);padding:14px 16px;background:rgba(139,92,246,0.04);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <h4 style="margin:0;font-size:13px;display:flex;align-items:center;gap:6px;color:#c084fc;">
+                    <span>🔮</span> 젬스(Gems) 연결
+                </h4>
+                <span style="font-size:11px;color:var(--text-secondary)" id="gemsCount">0개</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+                <input type="text" id="sideGemsName" placeholder="젬스 이름 (예: 🏢 경제전문 젬스)" style="background:var(--bg-card);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px;color:var(--text-primary);" />
+                <input type="text" id="sideGemsUrl" placeholder="https://gemini.google.com/gem/..." style="background:var(--bg-card);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px;color:var(--text-primary);" />
+                <button onclick="addSidebarGem()" style="background:linear-gradient(135deg, #8b5cf6, #ec4899);color:white;border:none;padding:7px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">+ 젬스 연결 저장</button>
+            </div>
+            <div id="sideGemsList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 기본 탭 사이트 목록 (안정적으로 표시되는 4개 사이트)
+const sites = [
+    {
+        name: 'Signal.bz',
+        url: 'https://www.signal.bz/',
+        color: '#00d4ff',
+        icon: '📡',
+        description: '실시간 검색어 트렌드',
+        useProxy: false
+    },
+    {
+        name: 'Google Trends KR',
+        url: 'https://trends.google.co.kr/trending?geo=KR',
+        color: '#4285f4',
+        icon: '📈',
+        description: '구글 트렌드 한국 실시간 인기 검색어',
+        useProxy: true
+    },
+    {
+        name: 'AdSense Farm',
+        url: 'https://adsensefarm.kr/realtime/',
+        color: '#f59e0b',
+        icon: '💰',
+        description: '실시간 인기 키워드 분석',
+        useProxy: false
+    },
+    {
+        name: '네이버 뉴스',
+        url: 'https://news.naver.com/',
+        color: '#03c75a',
+        icon: '📰',
+        description: '네이버 뉴스 메인 헤드라인',
+        useProxy: true
+    },
+    {
+        name: '유튜브 트렌드 허브',
+        url: 'https://playboard.co/chart/video/most-viewed-all-videos-in-south-korea-daily',
+        color: '#ff0000',
+        icon: '🎬',
+        description: '플레이보드 유튜브 인기 차트 & 공식 급상승 트렌드',
+        isHub: true
+    },
+    {
+        name: '글로벌 이슈 & 경제 뉴스',
+        url: 'https://news.google.com/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR%3Ako',
+        color: '#10b981',
+        icon: '🌍',
+        description: '사회·경제 최신 급상승 이슈 및 전세계 글로벌 뉴스 원클릭 탐색기',
+        isNewsHub: true
+    }
+];
+
+function getFrameSrc(site) {
+    return site.useProxy ? `/proxy?url=${encodeURIComponent(site.url)}` : site.url;
+}
+
+let currentLayout = 'tabs';
+let currentTab = 0;
+
+// 기본 즐겨찾기 프리셋 (초기 1회 제공)
+const DEFAULT_BOOKMARKS = [
+    {
+        name: '🔑 네이버 키워드 플래너',
+        url: 'https://ads.naver.com/manage/ad-accounts/2175003/sa/tool/keyword-planner'
+    },
+    {
+        name: '🧭 크리에이터 어드바이저',
+        url: 'https://creator-advisor.naver.com/naver_blog/steely-eyed/trends'
+    },
+    {
+        name: '📝 네이버 블로그 글쓰기',
+        url: 'https://blog.naver.com/GoBlogWrite.naver'
+    },
+    {
+        name: '🔍 블랙키위 (키워드 분석)',
+        url: 'https://blackkiwi.net/'
+    },
+    {
+        name: '📊 플레이보드 (유튜브 종합 랭킹)',
+        url: 'https://playboard.co/chart/video/most-viewed-all-videos-in-south-korea-daily'
+    },
+    {
+        name: '🎬 유튜브 공식 급상승 (새 탭)',
+        url: 'https://www.youtube.com/feed/trending'
+    }
+];
+
+// 즐겨찾기 로드
+function loadBookmarks() {
+    const saved = localStorage.getItem('blog_bookmarks');
+    if (!saved) {
+        localStorage.setItem('blog_bookmarks', JSON.stringify(DEFAULT_BOOKMARKS));
+        return DEFAULT_BOOKMARKS;
+    }
+    try {
+        return JSON.parse(saved);
+    } catch(e) {
+        return DEFAULT_BOOKMARKS;
+    }
+}
+
+let bookmarks = loadBookmarks();
+
+// 즐겨찾기 렌더링
+function renderBookmarks() {
+    const list = document.getElementById('bookmarkList');
+    document.getElementById('bookmarkCount').textContent = `${bookmarks.length}개`;
+
+    if (bookmarks.length === 0) {
+        list.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--text-secondary);font-size:12px;">등록된 바로가기가 없습니다.<br>위에서 추가해 보세요!</div>`;
+        return;
+    }
+
+    list.innerHTML = bookmarks.map((bm, idx) => `
+        <div class="bookmark-item">
+            <div class="bookmark-info" onclick="openBookmark('${escapeHtml(bm.url)}')">
+                <div class="bookmark-name">${escapeHtml(bm.name)}</div>
+                <div class="bookmark-url">${escapeHtml(bm.url)}</div>
+            </div>
+            <div class="bookmark-actions">
+                <button class="bookmark-action-btn" onclick="openBookmark('${escapeHtml(bm.url)}')" title="새 탭 열기">↗</button>
+                <button class="bookmark-action-btn delete" onclick="deleteBookmark(${idx})" title="삭제">✕</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 바로가기 추가
+function addBookmark() {
+    const nameInput = document.getElementById('bmName');
+    const urlInput = document.getElementById('bmUrl');
+    let name = nameInput.value.trim();
+    let url = urlInput.value.trim();
+
+    if (!url) {
+        alert('URL을 입력해주세요!');
+        return;
+    }
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+
+    if (!name) {
+        try {
+            name = new URL(url).hostname;
+        } catch(e) {
+            name = url;
+        }
+    }
+
+    bookmarks.push({ name, url });
+    localStorage.setItem('blog_bookmarks', JSON.stringify(bookmarks));
+    nameInput.value = '';
+    urlInput.value = '';
+    renderBookmarks();
+}
+
+// 바로가기 삭제
+function deleteBookmark(index) {
+    if (confirm(`'${bookmarks[index].name}' 바로가기를 삭제하시겠습니까?`)) {
+        bookmarks.splice(index, 1);
+        localStorage.setItem('blog_bookmarks', JSON.stringify(bookmarks));
+        renderBookmarks();
+    }
+}
+
+// ===== 🔮 사이드바 젬스(Gems) 관리 =====
+function loadSidebarGems() {
+    const saved = localStorage.getItem('blog_custom_gems');
+    if (!saved) return [
+        { name: '🌐 범용 블로그 전문 작가 젬스', url: 'https://gemini.google.com/app' },
+        { name: '📈 경제 · 금융 · 사회 특화 젬스', url: 'https://gemini.google.com/app' },
+        { name: '🎬 연예 · 방송 · 인물 특화 젬스', url: 'https://gemini.google.com/app' }
+    ];
+    try {
+        return JSON.parse(saved);
+    } catch(e) {
+        return [];
+    }
+}
+
+let sidebarGems = loadSidebarGems();
+
+function renderSidebarGems() {
+    const list = document.getElementById('sideGemsList');
+    const count = document.getElementById('gemsCount');
+    if (!list) return;
+    count.textContent = `${sidebarGems.length}개`;
+
+    if (sidebarGems.length === 0) {
+        list.innerHTML = `<div style="text-align:center;color:var(--text-secondary);font-size:11px;padding:8px;">등록된 젬스가 없습니다.</div>`;
+        return;
+    }
+
+    list.innerHTML = sidebarGems.map((g, idx) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-card);padding:6px 10px;border-radius:6px;border:1px solid var(--border);">
+            <div style="overflow:hidden;margin-right:6px;cursor:pointer;" onclick="window.open('${escapeHtml(g.url)}', '_blank')">
+                <div style="font-size:11px;font-weight:600;color:var(--text-primary);">${escapeHtml(g.name)}</div>
+                <div style="font-size:9px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.url)}</div>
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0;">
+                <button onclick="window.open('${escapeHtml(g.url)}', '_blank')" style="background:none;border:none;color:#c084fc;cursor:pointer;font-size:11px;" title="젬스 열기">↗</button>
+                <button onclick="deleteSidebarGem(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px;" title="삭제">✕</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function addSidebarGem() {
+    const nameInput = document.getElementById('sideGemsName');
+    const urlInput = document.getElementById('sideGemsUrl');
+    const name = nameInput.value.trim();
+    let url = urlInput.value.trim();
+
+    if (!name || !url) {
+        alert('젬스 이름과 공유 링크를 모두 입력해 주세요!');
+        return;
+    }
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+
+    sidebarGems.push({ name, url });
+    localStorage.setItem('blog_custom_gems', JSON.stringify(sidebarGems));
+    nameInput.value = '';
+    urlInput.value = '';
+    renderSidebarGems();
+    alert(`✅ "${name}" 젬스가 저장되었습니다!`);
+}
+
+function deleteSidebarGem(idx) {
+    if (confirm(`'${sidebarGems[idx].name}' 젬스 연결을 삭제하시겠습니까?`)) {
+        sidebarGems.splice(idx, 1);
+        localStorage.setItem('blog_custom_gems', JSON.stringify(sidebarGems));
+        renderSidebarGems();
+    }
+}
+
+// 바로가기 열기
+function openBookmark(url) {
+    window.open(url, '_blank');
+}
+
+// 사이드바 토글
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+}
+
+// Generate Tab Bar
+function renderTabBar() {
+    const tabBar = document.getElementById('tabBar');
+    tabBar.innerHTML = sites.map((site, i) => `
+        <div class="tab ${i === 0 ? 'active' : ''}" onclick="switchTab(${i})" data-tab="${i}">
+            <span class="dot" style="background:${site.color}"></span>
+            ${site.icon} ${site.name}
+        </div>
+    `).join('');
+}
+
+// Generate Tab Panels (single view)
+function renderTabPanels() {
+    const main = document.getElementById('mainContent');
+    let html = '';
+
+    sites.forEach((site, i) => {
+        html += `
+        <div class="tab-panel ${i === 0 ? 'active' : ''}" data-panel="${i}">
+            <div class="panel-info-bar">
+                <div class="site-info">
+                    <span class="dot" style="background:${site.color}"></span>
+                    <strong>${site.icon} ${site.name}</strong>
+                    <span class="url-display">${site.url}</span>
+                </div>
+                <div class="action-btns">
+                    <a href="${site.url}" target="_blank">🔗 새 탭에서 열기</a>
+                    <button onclick="reloadIframe(${i})">🔄 새로고침</button>
+                </div>
+            </div>
+            ${site.isNewsHub ? getNewsHubHtml() : site.isHub ? getYouTubeHubHtml() : `<iframe id="frame-${i}" src="${getFrameSrc(site)}" loading="lazy"></iframe>`}
+        </div>`;
+    });
+
+    html += `<div class="grid-container" id="gridContainer"></div>`;
+    main.innerHTML = html;
+}
+
+// 🌍 사회·경제 & 전세계 뉴스 원클릭 탐색기 UI
+function getNewsHubHtml() {
+    return `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;background:linear-gradient(135deg,rgba(16,185,129,0.05),rgba(15,23,42,0.6));overflow-y:auto;">
+            <div style="font-size:48px;margin-bottom:8px;">🌍</div>
+            <h2 style="font-size:20px;color:#fff;margin-bottom:6px;">글로벌 이슈 & 경제 뉴스 원클릭 탐색기</h2>
+            <p style="color:var(--text-secondary);font-size:12px;max-width:550px;line-height:1.5;margin-bottom:20px;text-align:center;">
+                가장 최근(24시간 내) + 가장 급상승 중인 사회/경제 유튜브 속보와 전 세계 글로벌 뉴스를 원클릭으로 검색합니다.
+            </p>
+
+            <!-- 심플 검색창: 최근 24시간 + 조회수 급상승 제한 -->
+            <div style="display:flex;gap:8px;width:100%;max-width:550px;margin-bottom:24px;">
+                <input type="text" id="quickNewsInput" placeholder="이슈 키워드 입력 (예: 금리, 환율, 엔비디아, 부동산, 유가...)" 
+                       style="flex:1;background:var(--bg-card);border:1px solid var(--border);color:#fff;padding:10px 14px;border-radius:6px;font-size:13px;"
+                       onkeypress="if(event.key==='Enter') searchYoutubeTrending();" />
+                <button onclick="searchYoutubeTrending()" 
+                        style="padding:10px 18px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">
+                    🔍 최신 급상승 검색
+                </button>
+            </div>
+
+            <!-- 1. 유튜브 사회/경제 최신 급상승 (24시간 내 업로드 + 조회수 순 필터) -->
+            <div style="width:100%;max-width:650px;margin-bottom:16px;">
+                <div style="font-size:12px;font-weight:700;color:#10b981;margin-bottom:8px;text-align:left;">
+                    🔥 유튜브 사회·경제 실시간 급상승 (최근 24시간 + 조회수순)
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+                    <button onclick="openYoutubeFilter('실시간 경제 증시 뉴스 속보')" 
+                            style="padding:10px 14px;background:#1e293b;color:#e2e8f0;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">
+                        📈 경제·증시 긴급 속보 ↗
+                    </button>
+                    <button onclick="openYoutubeFilter('부동산 금리 아파트 시장 전망')" 
+                            style="padding:10px 14px;background:#1e293b;color:#e2e8f0;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">
+                        🏢 부동산·금리 시장 이슈 ↗
+                    </button>
+                    <button onclick="openYoutubeFilter('오늘 주요 사회 사건 사고 속보')" 
+                            style="padding:10px 14px;background:#1e293b;color:#e2e8f0;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">
+                        🚨 사회 주요 사건·사고 ↗
+                    </button>
+                    <button onclick="window.open('https://www.youtube.com/results?search_query=%EB%89%B4%EC%8A%A4+%EB%9D%BC%EC%9D%B4%EB%5B%EB%B8%8C&sp=CAM%253D', '_blank')" 
+                            style="padding:10px 14px;background:#1e293b;color:#ef4444;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-align:left;">
+                        🔴 24시간 실시간 뉴스 라이브 ↗
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. 전세계 글로벌 뉴스 원클릭 -->
+            <div style="width:100%;max-width:650px;">
+                <div style="font-size:12px;font-weight:700;color:#38bdf8;margin-bottom:8px;text-align:left;">
+                    🌐 전 세계 실시간 글로벌 톱 뉴스
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+                    <button onclick="window.open('https://news.google.com/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=ko&gl=KR&ceid=KR%3Ako', '_blank')" 
+                            style="padding:10px 14px;background:#0f172a;color:#94a3b8;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;text-align:left;">
+                        🇺🇸 구글 전세계 국제뉴스 ↗
+                    </button>
+                    <button onclick="window.open('https://news.google.com/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtdHZHZ0pMVWlnQVAB?hl=en-US&gl=US&ceid=US:en', '_blank')" 
+                            style="padding:10px 14px;background:#0f172a;color:#94a3b8;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;text-align:left;">
+                        🌍 World News (US Edition) ↗
+                    </button>
+                    <button onclick="window.open('https://www.reuters.com/world/', '_blank')" 
+                            style="padding:10px 14px;background:#0f172a;color:#94a3b8;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;text-align:left;">
+                        🌐 로이터 (Reuters) 실시간 ↗
+                    </button>
+                    <button onclick="window.open('https://www.bloomberg.com/markets', '_blank')" 
+                            style="padding:10px 14px;background:#0f172a;color:#94a3b8;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;text-align:left;">
+                        📊 블룸버그 글로벌 경제 ↗
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 유튜브 최신(오늘/24h) + 조회수 급상승(View Count) 필터 자동 조합
+function openYoutubeFilter(keyword) {
+    // sp=CAMSAhAB : 최근 24시간(Today) + 조회수순(View count) 정렬 필터
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(keyword)}&sp=CAMSAhAB`;
+    window.open(url, '_blank');
+}
+
+function searchYoutubeTrending() {
+    const input = document.getElementById('quickNewsInput');
+    const q = input ? input.value.trim() : '';
+    if (!q) {
+        alert('검색할 키워드를 입력해주세요!');
+        return;
+    }
+    openYoutubeFilter(q);
+}
+
+function getYouTubeHubHtml() {
+    return `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;background:linear-gradient(135deg,rgba(255,0,0,0.05),rgba(0,0,0,0.3));text-align:center;">
+            <div style="font-size:56px;margin-bottom:12px;">🎬</div>
+            <h2 style="font-size:22px;color:#fff;margin-bottom:8px;">유튜브 실시간 트렌드 & 랭킹 허브</h2>
+            <p style="color:var(--text-secondary);font-size:13px;max-width:550px;line-height:1.6;margin-bottom:28px;">
+                유튜브 및 플레이보드는 브라우저 보안 정책상 외부 임베드 시 스크립트 충돌이 발생할 수 있습니다.<br>
+                아래 원클릭 버튼을 누르시면 <strong>브라우저 멈춤 없이 1초 만에 최적화된 화면</strong>으로 열립니다!
+            </p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;max-width:600px;">
+                <button onclick="window.open('https://playboard.co/chart/video/most-viewed-all-videos-in-south-korea-daily', '_blank')" 
+                        style="padding:12px 20px;background:linear-gradient(135deg,#ff0000,#cc0000);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(255,0,0,0.3);">
+                    📊 플레이보드 한국 일간 최다조회수 1~50위 ↗
+                </button>
+                <button onclick="window.open('https://www.youtube.com/feed/trending', '_blank')" 
+                        style="padding:12px 20px;background:#27272a;color:#fff;border:1px solid #3f3f46;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                    ▶ 유튜브 공식 인기 급상승 동영상 ↗
+                </button>
+                <button onclick="window.open('https://playboard.co/chart/video/most-viewed-all-videos-in-south-korea-daily?period=weekly', '_blank')" 
+                        style="padding:12px 20px;background:#18181b;color:var(--text-secondary);border:1px solid #27272a;border-radius:8px;font-size:13px;cursor:pointer;">
+                    📅 플레이보드 주간 종합 차트 ↗
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function renderGrid(layoutClass) {
+    const grid = document.getElementById('gridContainer');
+    grid.className = `grid-container active ${layoutClass}`;
+
+    grid.innerHTML = sites.map((site, i) => `
+        <div class="grid-cell">
+            <div class="grid-cell-header">
+                <span class="site-name">
+                    <span class="dot" style="background:${site.color}"></span>
+                    ${site.icon} ${site.name}
+                </span>
+                <button class="open-btn" onclick="window.open('${site.url}', '_blank')">새 탭 ↗</button>
+            </div>
+            ${site.isNewsHub ? getNewsHubHtml() : site.isHub ? getYouTubeHubHtml() : `<iframe src="${getFrameSrc(site)}" loading="lazy"></iframe>`}
+        </div>
+    `).join('');
+}
+
+function switchTab(index) {
+    currentTab = index;
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
+    document.querySelectorAll('.tab-panel').forEach((p, i) => p.classList.toggle('active', i === index));
+}
+
+function setLayout(layout) {
+    currentLayout = layout;
+
+    document.querySelectorAll('.layout-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+
+    const tabBar = document.getElementById('tabBar');
+    const panels = document.querySelectorAll('.tab-panel');
+    const grid = document.getElementById('gridContainer');
+
+    if (layout === 'tabs') {
+        tabBar.style.display = 'flex';
+        panels.forEach((p, i) => p.style.display = i === currentTab ? 'flex' : 'none');
+        if (panels[currentTab]) panels[currentTab].classList.add('active');
+        grid.style.display = 'none';
+        grid.className = 'grid-container';
+    } else {
+        tabBar.style.display = 'none';
+        panels.forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
+        renderGrid(layout);
+    }
+}
+
+function openAll() {
+    sites.forEach(site => window.open(site.url, '_blank'));
+}
+
+function reloadIframe(index) {
+    const frame = document.getElementById(`frame-${index}`);
+    if (frame) frame.src = frame.src;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateClock() {
+    const now = new Date();
+    const str = now.toLocaleString('ko-KR', { 
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+    });
+    document.getElementById('clock').textContent = '🕐 ' + str;
+}
+
+// Init
+renderTabBar();
+renderTabPanels();
+renderBookmarks();
+renderSidebarGems();
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+
+</body>
+</html>

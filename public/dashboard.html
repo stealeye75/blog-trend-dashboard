@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 블로그 트렌드 키워드 대시보드</title>
+    <style>
+        :root {
+            --bg: #0a0a1a;
+            --bg2: #111128;
+            --bg3: #1a1a3e;
+            --card: #16213e;
+            --accent: #00d4ff;
+            --accent2: #7c3aed;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --naver: #03c75a;
+            --text: #e2e8f0;
+            --text2: #94a3b8;
+            --border: #334155;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, 'Malgun Gothic', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--bg2), var(--bg3));
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .dashboard-header h1 {
+            font-size: 20px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .refresh-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-btn:hover { transform: scale(1.05); box-shadow: 0 4px 20px rgba(0,212,255,0.3); }
+        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .refresh-btn.loading .spin { animation: spin 1s linear infinite; }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text2);
+        }
+
+        .auto-refresh select {
+            background: var(--bg3);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.online { background: rgba(16,185,129,0.2); color: var(--green); }
+        .status-badge.loading { background: rgba(245,158,11,0.2); color: var(--yellow); }
+        .status-badge.error { background: rgba(239,68,68,0.2); color: var(--red); }
+
+        .last-update {
+            font-size: 12px;
+            color: var(--text2);
+            font-family: monospace;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            padding: 16px 24px;
+            background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 160px;
+            background: var(--card);
+            border-radius: 10px;
+            padding: 14px 18px;
+            border: 1px solid var(--border);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover { transform: translateY(-2px); }
+
+        .stat-card .stat-label {
+            font-size: 11px;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .stat-card .stat-sub {
+            font-size: 11px;
+            color: var(--text2);
+            margin-top: 4px;
+        }
+
+        /* Source Cards Grid */
+        .sources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            padding: 20px 24px;
+        }
+
+        .source-card {
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .source-card:hover {
+            border-color: rgba(0,212,255,0.3);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        .source-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .source-card-header .source-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .source-card-header .source-icon {
+            font-size: 22px;
+        }
+
+        .source-card-header .source-name {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .source-card-header .source-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+        }
+
+        .source-card-header .keyword-count {
+            font-size: 12px;
+            color: var(--text2);
+            background: rgba(255,255,255,0.05);
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+
+        .source-card-header .source-status {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .source-card-header .source-status.success { background: rgba(16,185,129,0.15); color: var(--green); }
+        .source-card-header .source-status.error { background: rgba(239,68,68,0.15); color: var(--red); }
+        .source-card-header .source-status.partial { background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+        .keyword-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .keyword-list::-webkit-scrollbar { width: 6px; }
+        .keyword-list::-webkit-scrollbar-track { background: transparent; }
+        .keyword-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .keyword-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .keyword-item:hover { background: rgba(0,212,255,0.05); }
+
+        .keyword-item .rank {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .keyword-item .rank.top3 {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+        }
+
+        .keyword-item .rank.normal {
+            background: rgba(255,255,255,0.05);
+            color: var(--text2);
+        }
+
+        .keyword-item .keyword-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .keyword-item .keyword-meta {
+            font-size: 11px;
+            color: var(--text2);
+            text-align: right;
+            flex-shrink: 0;
+            margin-left: 10px;
+        }
+
+        .keyword-item .keyword-meta .traffic {
+            color: var(--yellow);
+            font-weight: 600;
+        }
+
+        .source-card-footer {
+            padding: 10px 18px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text2);
+        }
+
+        .source-card-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .source-card-footer a:hover { text-decoration: underline; }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text2);
+        }
+
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(10,10,26,0.8);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .loading-overlay.active { display: flex; }
+
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-overlay p {
+            font-size: 14px;
+            color: var(--text2);
+        }
+
+        /* Combined Keywords Section */
+        .combined-section {
+            padding: 20px 24px;
+        }
+
+        .combined-section h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .combined-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .keyword-tag {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+            background: var(--card);
+        }
+
+        .keyword-tag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .keyword-tag .tag-rank {
+            font-weight: 700;
+            margin-right: 4px;
+            opacity: 0.6;
+        }
+
+        /* Multi-browser link */
+        .multi-browser-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: var(--bg3);
+            color: var(--accent);
+            text-decoration: none;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .multi-browser-link:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        /* Naver search link */
+        .search-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            margin-left: 6px;
+            background: rgba(3,199,90,0.1);
+            color: var(--naver);
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 11px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .keyword-item:hover .search-link { opacity: 1; }
+
+        /* Footer */
+        .dashboard-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text2);
+            font-size: 12px;
+        }
+
+        /* Login & Action buttons */
+        .btn-naver {
+            background: #03c75a !important;
+            color: white !important;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-naver:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(3,199,90,0.4); }
+
+        .btn-google {
+            background: #4285f4 !important;
+            color: white !important;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-google:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(66,133,244,0.4); }
+
+        .btn-advisor {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+            color: white !important;
+            border: none;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-advisor:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(16,185,129,0.4); }
+
+        /* Creator Advisor Dedicated Section */
+        .advisor-section {
+            margin: 20px 24px;
+            background: var(--card);
+            border-radius: 12px;
+            border: 1px solid rgba(3,199,90,0.3);
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+
+        .advisor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(3,199,90,0.1), rgba(16,185,129,0.05));
+            border-bottom: 1px solid var(--border);
+        }
+
+        .advisor-header h2 {
+            font-size: 16px;
+            color: #03c75a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .advisor-tabs {
+            display: flex;
+            gap: 6px;
+            padding: 12px 20px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .advisor-tab {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--bg2);
+            color: var(--text2);
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .advisor-tab:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .advisor-tab.active {
+            background: #03c75a;
+            color: white;
+            border-color: #03c75a;
+            font-weight: 600;
+        }
+
+        .advisor-content {
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+        }
+
+        /* Gems and Analysis Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-box {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            width: 90%;
+            max-width: 680px;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            animation: modalFadeIn 0.2s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            background: var(--bg3);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 17px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text);
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: var(--text2);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .modal-close-btn:hover { color: var(--red); }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .modal-footer {
+            padding: 14px 20px;
+            background: var(--bg3);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .gems-select-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .gems-select-box select {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            flex: 1;
+        }
+
+        .btn-gems-action {
+            background: linear-gradient(135deg, #4285f4, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 7px 13px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-gems-action:hover { opacity: 0.9; }
+
+        .btn-img-prompt {
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-img-prompt:hover { opacity: 0.9; }
+
+        /* Individual Numbered Image Prompt Buttons (1, 2, 3, 4, 5) */
+        .img-num-group {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .img-num-btn {
+            background: rgba(236,72,153,0.15);
+            border: 1px solid rgba(236,72,153,0.35);
+            color: #f472b6;
+            padding: 5px 9px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .img-num-btn:hover {
+            background: #ec4899;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .img-num-btn.copied {
+            background: #10b981 !important;
+            border-color: #10b981 !important;
+            color: #fff !important;
+        }
+
+        /* AI Multi-Platform Slice Group */
+        .ai-slice-group {
+            display: inline-flex;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .ai-slice-btn {
+            background: transparent;
+            color: var(--text2);
+            border: none;
+            border-right: 1px solid var(--border);
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .ai-slice-btn:last-child { border-right: none; }
+        .ai-slice-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+        .ai-slice-btn.gpt:hover { color: #10a37f; }
+        .ai-slice-btn.grok:hover { color: #fff; background: #000; }
+        .ai-slice-btn.claude:hover { color: #d97706; }
+
+        .btn-modal-cancel {
+            background: transparent;
+            color: var(--text2);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .btn-modal-cancel:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+
+        .analysis-card {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .analysis-card-title {
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Popover Mini Choice Tooltip */
+        .keyword-popover {
+            position: absolute;
+            background: var(--bg3);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            gap: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+            z-index: 10000;
+            animation: modalFadeIn 0.15s ease-out;
+        }
+
+        .popover-btn {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+        }
+
+        .popover-btn:hover {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        .popover-btn.write {
+            background: linear-gradient(135deg, #4285f4, #8b5cf6);
+            border-color: #8b5cf6;
+            color: white;
+        }
+
+        .popover-btn.write:hover {
+            opacity: 0.9;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .sources-grid { grid-template-columns: 1fr; }
+            .stats-bar { flex-direction: column; }
+            .dashboard-header { flex-direction: column; gap: 12px; }
+            .advisor-content { grid-template-columns: 1fr; }
+            .modal-footer { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <p>🔄 키워드 데이터 수집 중...</p>
+</div>
+
+<!-- Header -->
+<header class="dashboard-header">
+    <div style="display:flex;align-items:center;gap:16px;">
+        <h1>📊 블로그 트렌드 키워드 대시보드</h1>
+        <a href="/multi" class="multi-browser-link">📑 멀티 브라우저</a>
+    </div>
+    <div class="header-actions">
+        <button class="btn-naver" onclick="window.open('https://creator-advisor.naver.com/naver_blog/steely-eyed/trends', '_blank')" title="내 계정으로 크리에이터 어드바이저 바로 열기">
+            🧭 어드바이저 열기 ↗
+        </button>
+        <button class="btn-naver" style="background:#1e293b!important;border:1px solid var(--border)!important;" onclick="window.open('https://ads.naver.com/manage/ad-accounts/2175003/sa/tool/keyword-planner', '_blank')" title="네이버 검색광고 키워드 도구 열기">
+            🔑 키워드 플래너 ↗
+        </button>
+        <button class="btn-google" onclick="window.open('https://trends.google.co.kr/trending?geo=KR', '_blank')" title="구글 트렌드 실시간 분석 열기">
+            📈 구글 트렌드 ↗
+        </button>
+        <button class="btn-advisor" onclick="openGemsManageModal()" style="background:linear-gradient(135deg, #8b5cf6, #ec4899);border:none;" title="내 젬스(Gems) 연결 및 관리">
+            🔮 젬스(Gems) 관리
+        </button>
+        <button class="btn-advisor" onclick="copyShareUrl()" title="지인에게 공유할 링크 복사하기">
+            🔗 대시보드 링크 복사
+        </button>
+
+        <span class="last-update" id="lastUpdate">마지막 업데이트: -</span>
+        <span class="status-badge online" id="statusBadge">● 정상</span>
+        <div class="auto-refresh">
+            <label>자동 갱신:</label>
+            <select id="autoRefreshSelect" onchange="setAutoRefresh(this.value)">
+                <option value="0">끄기</option>
+                <option value="60">1분</option>
+                <option value="300" selected>5분</option>
+                <option value="600">10분</option>
+            </select>
+        </div>
+        <button class="refresh-btn" id="refreshBtn" onclick="collectAll()">
+            <span class="spin">🔄</span> 실시간 수집
+        </button>
+    </div>
+</header>
+
+<!-- Stats Bar -->
+<div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+        <div class="stat-label">총 수집 키워드</div>
+        <div class="stat-value" id="statTotal" style="color:var(--accent)">-</div>
+        <div class="stat-sub">전체 소스 합산</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">실시간 검색어</div>
+        <div class="stat-value" id="statRealtime" style="color:#fabc09">-</div>
+        <div class="stat-sub">다음 + 네이버 + 구글</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">구글 트렌드</div>
+        <div class="stat-value" id="statGoogle" style="color:#4285f4">-</div>
+        <div class="stat-sub">일간 인기 검색어</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">네이버 뉴스</div>
+        <div class="stat-value" id="statNaver" style="color:var(--naver)">-</div>
+        <div class="stat-sub">실시간 헤드라인</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">수집 소요시간</div>
+        <div class="stat-value" id="statElapsed" style="color:var(--green)">-</div>
+        <div class="stat-sub" id="statStatusText">정상 작동중</div>
+    </div>
+</div>
+
+<!-- Trending Keywords Cloud -->
+<div class="combined-section" id="combinedSection" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h2 style="margin:0;">🔥 통합 트렌딩 키워드 (클릭시 네이버 검색)</h2>
+        <button onclick="copyAllKeywords()" style="background:var(--bg3);color:var(--accent);border:1px solid var(--border);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">
+            📋 전체 키워드 복사 (메모장/노션용)
+        </button>
+    </div>
+    <div class="combined-keywords" id="combinedKeywords"></div>
+</div>
+
+<!-- Source Cards -->
+<div class="sources-grid" id="sourcesGrid">
+    <div class="empty-state" style="grid-column: 1/-1;">
+        <div class="icon">📊</div>
+        <p>데이터를 수집하려면 상단의 <strong>"데이터 수집"</strong> 버튼을 클릭하세요.</p>
+        <p style="margin-top:8px;font-size:12px;color:var(--text2)">Signal.bz, Google Trends, AdSense Farm, 네이버 뉴스의 키워드를 실시간으로 수집합니다.</p>
+    </div>
+</div>
+
+<!-- Mini Popover for Keyword Click (Search vs AI Write) -->
+<div class="keyword-popover" id="keywordPopover" style="display:none;">
+    <button class="popover-btn" id="popoverSearchBtn" onclick="handlePopoverSearch()">
+        🔍 검색 보기
+    </button>
+    <button class="popover-btn write" id="popoverWriteBtn" onclick="handlePopoverWrite()">
+        ✍️ AI 분석 & 글작성
+    </button>
+</div>
+
+<!-- Modal 1: Analysis & Prompt Data Pack Preview Modal -->
+<div class="modal-overlay" id="analysisModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3><span>⚡</span> <span id="modalKeywordTitle">키워드 분석 및 글작성 프리뷰</span></h3>
+            <button class="modal-close-btn" onclick="closeAnalysisModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <div id="modalLoading" style="text-align:center;padding:40px 10px;color:var(--text2)">
+                <div class="loading-spinner" style="margin:0 auto 16px;"></div>
+                <p style="font-size:14px;font-weight:600;color:var(--text)">네이버 상위 1~5위 블로그 분석 데이터를 추출하는 중...</p>
+                <p style="font-size:12px;margin-top:4px;">포스팅 제목, 본문 요약, 핵심 키워드 빈도를 정제하고 있습니다.</p>
+            </div>
+            <div id="modalContent" style="display:none">
+                <!-- Top 5 Blogs Card -->
+                <div class="analysis-card">
+                    <div class="analysis-card-title">🏆 네이버 상위 1~5위 블로그 포스팅</div>
+                    <div id="modalTopBlogs" style="display:flex;flex-direction:column;gap:8px;"></div>
+                </div>
+
+                <!-- Core Keywords Card -->
+                <div class="analysis-card">
+                    <div class="analysis-card-title">🔑 본문 빈출 핵심 키워드</div>
+                    <div id="modalCoreKeywords" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                </div>
+
+                <!-- Data Pack Preview -->
+                <div class="analysis-card" style="margin-bottom:0;">
+                    <div class="analysis-card-title" style="justify-content:space-between">
+                        <span>📋 젬스(Gems) 전송용 데이터 팩 (미리보기)</span>
+                        <button onclick="copyDataPackOnly()" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;">복사</button>
+                    </div>
+                    <pre id="modalDataPack" style="background:rgba(0,0,0,0.4);padding:10px;border-radius:6px;font-size:11px;color:#cbd5e1;white-space:pre-wrap;max-height:160px;overflow-y:auto;font-family:monospace;margin:0;"></pre>
+                </div>
+
+                <!-- Image Generation Prompt Card -->
+                <div class="analysis-card" style="margin-top:14px;margin-bottom:0;border-color:rgba(236,72,153,0.3);background:rgba(236,72,153,0.04);">
+                    <div class="analysis-card-title" style="justify-content:space-between;color:#f472b6;flex-wrap:wrap;gap:8px;">
+                        <span style="display:flex;align-items:center;gap:6px;">
+                            <span>🎨</span> AI 이미지 프롬프트 (1~5번 개별 복사)
+                        </span>
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <!-- Individual 1, 2, 3, 4, 5 Numbered Buttons -->
+                            <div class="img-num-group" id="imgNumButtonGroup">
+                                <button class="img-num-btn" id="btnImgNum1" onclick="copySingleImagePrompt(1)" title="1번: 대표 썸네일(3:4)">1번 썸네일</button>
+                                <button class="img-num-btn" id="btnImgNum2" onclick="copySingleImagePrompt(2)" title="2번: 본문1 사건/현장(16:9)">2번</button>
+                                <button class="img-num-btn" id="btnImgNum3" onclick="copySingleImagePrompt(3)" title="3번: 본문2 핵심쟁점(16:9)">3번</button>
+                                <button class="img-num-btn" id="btnImgNum4" onclick="copySingleImagePrompt(4)" title="4번: 본문3 영향/반응(16:9)">4번</button>
+                                <button class="img-num-btn" id="btnImgNum5" onclick="copySingleImagePrompt(5)" title="5번: 본문4 향후전망(16:9)">5번</button>
+                            </div>
+                            <!-- Copy All Button -->
+                            <button class="btn-img-prompt" id="btnCopyImgPrompt" onclick="copyImagePromptOnly()" title="전체 프롬프트 한 번에 복사">
+                                📋 전체 복사
+                            </button>
+                        </div>
+                    </div>
+                    <pre id="modalImagePrompt" style="background:rgba(0,0,0,0.4);padding:10px;border-radius:6px;font-size:11px;color:#fbcfe8;white-space:pre-wrap;max-height:140px;overflow-y:auto;font-family:monospace;margin:0;"></pre>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" id="modalFooter" style="display:none;flex-wrap:wrap;gap:10px;">
+            <div class="gems-select-box" style="min-width:240px;">
+                <span style="font-size:12px;color:var(--text2);white-space:nowrap;">작성할 젬스:</span>
+                <select id="modalGemsSelect">
+                    <!-- Options populated by JS -->
+                </select>
+            </div>
+            
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <!-- 젬스로 글작성 시작 (슬림화) -->
+                <button class="btn-gems-action" onclick="executeGemsWrite()" title="데이터 팩 복사 & 젬스 창 열기 (창은 유지됨)">
+                    🚀 젬스 글작성 ↗
+                </button>
+
+                <!-- AI 플랫폼 슬라이스 이동 버튼 (GPT, GROK, Claude) -->
+                <div class="ai-slice-group" title="데이터 팩 복사 & 다른 AI 플랫폼에서 작성">
+                    <button class="ai-slice-btn gpt" onclick="executeOtherAiWrite('https://chatgpt.com')">
+                        GPT ↗
+                    </button>
+                    <button class="ai-slice-btn grok" onclick="executeOtherAiWrite('https://x.com/i/grok')">
+                        GROK ↗
+                    </button>
+                    <button class="ai-slice-btn claude" onclick="executeOtherAiWrite('https://claude.ai')">
+                        Claude ↗
+                    </button>
+                </div>
+
+                <!-- 수동 닫기 버튼 -->
+                <button class="btn-modal-cancel" onclick="closeAnalysisModal()">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Gems Connection Management Modal -->
+<div class="modal-overlay" id="gemsManageModal">
+    <div class="modal-box" style="max-width:540px;">
+        <div class="modal-header">
+            <h3><span>🔮</span> 나만의 젬스(Gems) 연결 관리</h3>
+            <button class="modal-close-btn" onclick="closeGemsManageModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="color:var(--text2);margin-bottom:14px;font-size:12px;">
+                구독 중인 Gemini에서 만든 <strong>Gems 공유 링크</strong>(`https://gemini.google.com/gem/...`)를 등록해 두면, 글작성 클릭 시 해당 젬스로 바로 연결됩니다.
+            </p>
+
+            <!-- Add Form -->
+            <div style="background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;">
+                <div style="font-weight:600;font-size:12px;margin-bottom:8px;color:var(--accent)">+ 새 젬스 등록</div>
+                <input type="text" id="newGemsName" placeholder="젬스 이름 (예: 🏢 경제·사회 전문 작가)" style="width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:8px 10px;border-radius:6px;margin-bottom:8px;font-size:12px;" />
+                <input type="text" id="newGemsUrl" placeholder="젬스 공유 URL (https://gemini.google.com/gem/... 또는 일반 gemini)" style="width:100%;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:8px 10px;border-radius:6px;margin-bottom:8px;font-size:12px;" />
+                <button onclick="addCustomGem()" style="width:100%;background:var(--accent);color:#000;border:none;padding:8px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px;">+ 젬스 저장하기</button>
+            </div>
+
+            <!-- List -->
+            <div style="font-weight:600;font-size:12px;margin-bottom:8px;">등록된 젬스 목록</div>
+            <div id="gemsListContainer" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
+        </div>
+        <div class="modal-footer" style="justify-content:flex-end;">
+            <button class="btn-modal-cancel" onclick="closeGemsManageModal()">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<div class="dashboard-footer">
+    <p>📊 블로그 트렌드 대시보드 v2.0 | 데이터는 각 사이트에서 실시간으로 수집됩니다</p>
+    <p style="margin-top:4px;">
+        <a href="https://adsensefarm.kr/realtime/" target="_blank" style="color:var(--yellow)">AdSense Farm</a> · 
+        <a href="https://trends.google.com/trending?geo=KR" target="_blank" style="color:#4285f4">Google Trends</a> · 
+        <a href="https://news.naver.com/" target="_blank" style="color:var(--naver)">네이버 뉴스</a> · 
+        <a href="https://www.signal.bz/" target="_blank" style="color:var(--accent)">Signal.bz</a> · 
+        <a href="https://ads.naver.com/" target="_blank" style="color:var(--accent2)">네이버 키워드 플래너</a>
+    </p>
+</div>
+
+<script>
+let autoRefreshTimer = null;
+let isLoading = false;
+
+const sourceUrls = {
+    'Signal.bz': 'https://www.signal.bz/',
+    'Google Trends KR': 'https://trends.google.co.kr/trending?geo=KR',
+    'AdSense Farm': 'https://adsensefarm.kr/realtime/',
+    '네이버 뉴스': 'https://news.naver.com/',
+    '네이버 검색 트렌드': 'https://m.search.naver.com/'
+};
+
+const sourceColors = ['#00d4ff', '#4285f4', '#f59e0b', '#03c75a', '#03c75a'];
+
+async function collectAll() {
+    if (isLoading) return;
+    isLoading = true;
+
+    const btn = document.getElementById('refreshBtn');
+    const badge = document.getElementById('statusBadge');
+    const overlay = document.getElementById('loadingOverlay');
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    badge.className = 'status-badge loading';
+    badge.textContent = '● 수집중...';
+    overlay.classList.add('active');
+
+    try {
+        const response = await fetch('/api/collect-all');
+        const data = await response.json();
+
+        renderDashboard(data);
+
+        badge.className = 'status-badge online';
+        badge.textContent = '● 정상';
+        document.getElementById('lastUpdate').textContent = 
+            `마지막 업데이트: ${new Date().toLocaleTimeString('ko-KR')}`;
+
+    } catch (error) {
+        badge.className = 'status-badge error';
+        badge.textContent = '● 오류';
+        console.error('수집 실패:', error);
+        document.getElementById('sourcesGrid').innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1">
+                <div class="icon">❌</div>
+                <p>데이터 수집에 실패했습니다.</p>
+                <p style="margin-top:8px;font-size:12px">${error.message}</p>
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        overlay.classList.remove('active');
+        isLoading = false;
+    }
+}
+
+function renderDashboard(data) {
+    // Update stats
+    document.getElementById('statTotal').textContent = data.totalKeywords;
+    const googleData = data.sources.find(s => s.source.includes('Google Trends'));
+    const googleEl = document.getElementById('statGoogle');
+    if (googleEl) googleEl.textContent = googleData ? googleData.keywords.length : 0;
+
+    // 실시간 검색어 합계 (다음 + 네이버 + 구글)
+    const realtimeCount = data.sources
+        .filter(s => s.source.includes('실시간') || s.source.includes('인기'))
+        .reduce((sum, s) => sum + s.keywords.length, 0);
+    document.getElementById('statRealtime').textContent = realtimeCount;
+
+    const naverData = data.sources.find(s => s.source.includes('네이버 뉴스'));
+    document.getElementById('statNaver').textContent = naverData ? naverData.keywords.length : 0;
+
+    const elapsedEl = document.getElementById('statElapsed');
+    if (elapsedEl) elapsedEl.textContent = `${(data.elapsed / 1000).toFixed(1)}s`;
+    
+    const statusTextEl = document.getElementById('statStatusText');
+    if (statusTextEl) statusTextEl.textContent = data.successCount > 0 ? `${data.successCount}개 소스 성공` : '수집 실패';
+
+    // Render source cards
+    const grid = document.getElementById('sourcesGrid');
+    grid.innerHTML = data.sources.map(source => {
+        const url = sourceUrls[source.source] || '#';
+
+        const keywordsHtml = source.keywords.length > 0 ?
+            source.keywords.map((kw, i) => `
+                <div class="keyword-item" onclick="searchNaver('${escapeHtml(kw.keyword)}')">
+                    <span class="rank ${i < 3 ? 'top3' : 'normal'}">${kw.rank || i + 1}</span>
+                    <span class="keyword-text">
+                        ${escapeHtml(kw.keyword)}
+                        ${kw.traffic ? `<span style="color:var(--yellow);font-size:11px;margin-left:6px;">${kw.traffic}</span>` : ''}
+                    </span>
+                    <a href="https://search.naver.com/search.naver?query=${encodeURIComponent(kw.keyword)}" 
+                       target="_blank" class="search-link" onclick="event.stopPropagation()">
+                        N 검색
+                    </a>
+                    <span class="keyword-meta">
+                        ${kw.relatedNews ? `<div style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(kw.relatedNews)}</div>` : ''}
+                    </span>
+                </div>
+            `).join('') :
+            `<div class="empty-state">
+                <div class="icon">📭</div>
+                <p>${source.message || '데이터 없음'}</p>
+            </div>`;
+
+        return `
+            <div class="source-card">
+                <div class="source-card-header">
+                    <div class="source-info">
+                        <span class="source-dot" style="background:${source.color};width:10px;height:10px;border-radius:50%;display:inline-block"></span>
+                        <span class="source-icon">${source.icon}</span>
+                        <span class="source-name">${source.source}</span>
+                        <span class="keyword-count">${source.keywords.length}개</span>
+                    </div>
+                    <span class="source-status ${source.status}">${source.status === 'success' ? '✅ 성공' : source.status === 'partial' ? '⚠️ 부분' : '❌ 실패'}</span>
+                </div>
+                <div class="keyword-list">${keywordsHtml}</div>
+                <div class="source-card-footer">
+                    <span>${source.message}</span>
+                    <a href="${url}" target="_blank">사이트 방문 ↗</a>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Render combined trending keywords
+    renderCombinedKeywords(data.sources);
+}
+
+function renderCombinedKeywords(sources) {
+    const section = document.getElementById('combinedSection');
+    const container = document.getElementById('combinedKeywords');
+
+    const allKeywords = [];
+    sources.forEach(source => {
+        source.keywords.forEach(kw => {
+            allKeywords.push({
+                keyword: kw.keyword,
+                source: source.source,
+                color: source.color,
+                icon: source.icon
+            });
+        });
+    });
+
+    if (allKeywords.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+
+    // 중복 제거 및 상위 30개
+    const unique = [];
+    const seen = new Set();
+    allKeywords.forEach(kw => {
+        const key = kw.keyword.toLowerCase().trim();
+        if (!seen.has(key) && key.length > 1) {
+            seen.add(key);
+            unique.push(kw);
+        }
+    });
+
+    latestKeywords = unique;
+
+    container.innerHTML = unique.slice(0, 40).map((kw, i) => `
+        <span class="keyword-tag" style="border-color:${kw.color}30" 
+              onclick="showKeywordPopover(event, '${escapeHtml(kw.keyword)}')"
+              title="${kw.source}">
+            <span class="tag-rank" style="color:${kw.color}">#${i + 1}</span>
+            ${escapeHtml(kw.keyword)}
+            <span style="font-size:10px;margin-left:4px">${kw.icon}</span>
+        </span>
+    `).join('');
+}
+
+// ===== 🔮 젬스(Gems) 관리 및 로컬 저장소 =====
+const DEFAULT_GEMS = [
+    {
+        name: '🤖 Gemini 일반 챗봇 (기본 AI 자동 작성)',
+        url: 'https://gemini.google.com/app'
+    },
+    {
+        name: '🌐 범용 블로그 전문 작가 젬스',
+        url: 'https://gemini.google.com/app'
+    },
+    {
+        name: '📈 경제 · 금융 · 사회 특화 젬스',
+        url: 'https://gemini.google.com/app'
+    },
+    {
+        name: '🎬 연예 · 방송 · 인물 특화 젬스',
+        url: 'https://gemini.google.com/app'
+    }
+];
+
+function loadGems() {
+    const saved = localStorage.getItem('blog_custom_gems');
+    if (!saved) {
+        localStorage.setItem('blog_custom_gems', JSON.stringify(DEFAULT_GEMS));
+        return DEFAULT_GEMS;
+    }
+    try {
+        return JSON.parse(saved);
+    } catch(e) {
+        return DEFAULT_GEMS;
+    }
+}
+
+let userGems = loadGems();
+
+function saveGems(gems) {
+    userGems = gems;
+    localStorage.setItem('blog_custom_gems', JSON.stringify(gems));
+    renderGemsOptions();
+    renderGemsList();
+}
+
+function renderGemsOptions() {
+    const select = document.getElementById('modalGemsSelect');
+    if (!select) return;
+    select.innerHTML = userGems.map((g, idx) => `
+        <option value="${idx}">${escapeHtml(g.name)}</option>
+    `).join('');
+}
+
+function renderGemsList() {
+    const container = document.getElementById('gemsListContainer');
+    if (!container) return;
+    if (userGems.length === 0) {
+        container.innerHTML = `<div style="text-align:center;color:var(--text2);padding:15px;font-size:12px;">등록된 젬스가 없습니다. 위에서 추가해 보세요.</div>`;
+        return;
+    }
+    container.innerHTML = userGems.map((g, idx) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--border);">
+            <div style="overflow:hidden;margin-right:10px;">
+                <div style="font-weight:600;font-size:12px;color:var(--text);">${escapeHtml(g.name)}</div>
+                <div style="font-size:10px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.url)}</div>
+            </div>
+            <button onclick="deleteCustomGem(${idx})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:4px;" title="삭제">✕</button>
+        </div>
+    `).join('');
+}
+
+function addCustomGem() {
+    const nameInput = document.getElementById('newGemsName');
+    const urlInput = document.getElementById('newGemsUrl');
+    const name = nameInput.value.trim();
+    let url = urlInput.value.trim();
+
+    if (!name || !url) {
+        alert('젬스 이름과 공유 URL을 모두 입력해 주세요.');
+        return;
+    }
+
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+    }
+
+    userGems.push({ name, url });
+    saveGems(userGems);
+    nameInput.value = '';
+    urlInput.value = '';
+    alert(`✅ "${name}" 젬스가 등록되었습니다!`);
+}
+
+function deleteCustomGem(idx) {
+    if (confirm(`정말 이 젬스를 삭제하시겠습니까?`)) {
+        userGems.splice(idx, 1);
+        saveGems(userGems);
+    }
+}
+
+function openGemsManageModal() {
+    renderGemsList();
+    document.getElementById('gemsManageModal').classList.add('active');
+}
+
+function closeGemsManageModal() {
+    document.getElementById('gemsManageModal').classList.remove('active');
+}
+
+// ===== 🔍 / ✍️ 키워드 클릭 미니 팝오버 =====
+let currentSelectedKeyword = '';
+
+function showKeywordPopover(event, keyword) {
+    event.stopPropagation();
+    currentSelectedKeyword = keyword;
+    const popover = document.getElementById('keywordPopover');
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    popover.style.display = 'flex';
+    popover.style.top = `${window.scrollY + rect.bottom + 6}px`;
+    popover.style.left = `${window.scrollX + rect.left}px`;
+}
+
+// 화면 다른 곳 클릭 시 팝오버 닫기
+document.addEventListener('click', (e) => {
+    const popover = document.getElementById('keywordPopover');
+    if (popover && !popover.contains(e.target)) {
+        popover.style.display = 'none';
+    }
+});
+
+function handlePopoverSearch() {
+    const popover = document.getElementById('keywordPopover');
+    if (popover) popover.style.display = 'none';
+    searchNaver(currentSelectedKeyword);
+}
+
+function handlePopoverWrite() {
+    const popover = document.getElementById('keywordPopover');
+    if (popover) popover.style.display = 'none';
+    openAnalysisModal(currentSelectedKeyword);
+}
+
+// ===== ⚡ 상위글 분석 및 젬스 글작성 프리뷰 모달 =====
+let currentAnalysisData = null;
+
+async function openAnalysisModal(keyword) {
+    const modal = document.getElementById('analysisModal');
+    const modalLoading = document.getElementById('modalLoading');
+    const modalContent = document.getElementById('modalContent');
+    const modalFooter = document.getElementById('modalFooter');
+    
+    document.getElementById('modalKeywordTitle').textContent = `"${keyword}" 상위글 분석 & 글작성 프리뷰`;
+    modalLoading.style.display = 'block';
+    modalContent.style.display = 'none';
+    modalFooter.style.display = 'none';
+    modal.classList.add('active');
+
+    renderGemsOptions();
+
+    try {
+        const response = await fetch(`/api/analyze-keyword?keyword=${encodeURIComponent(keyword)}`);
+        const data = await response.json();
+        currentAnalysisData = data;
+
+        // 1. 상위 5개 블로그 렌더링
+        const topBlogsHtml = data.topBlogs.map(b => `
+            <div style="background:var(--bg);padding:10px;border-radius:6px;border-left:3px solid var(--accent);font-size:12px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                    <span style="font-weight:700;color:var(--text);">${b.rank}위. ${escapeHtml(b.title)}</span>
+                    <a href="${b.url}" target="_blank" style="color:var(--accent);font-size:11px;text-decoration:none;margin-left:8px;flex-shrink:0;">본문 보기 ↗</a>
+                </div>
+                <div style="color:var(--text2);font-size:11px;line-height:1.4;">${escapeHtml(b.snippet)}</div>
+            </div>
+        `).join('');
+        document.getElementById('modalTopBlogs').innerHTML = topBlogsHtml || '<div style="color:var(--text2);">수집된 상위 글이 없습니다.</div>';
+
+        // 2. 빈출 핵심 키워드 렌더링
+        const keywordsHtml = data.coreKeywords.map(k => `
+            <span style="background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.25);padding:3px 8px;border-radius:12px;font-size:11px;">
+                ${escapeHtml(k.word)} <strong style="color:#fff;font-size:10px;">${k.count}회</strong>
+            </span>
+        `).join('');
+        document.getElementById('modalCoreKeywords').innerHTML = keywordsHtml || '<span style="color:var(--text2);font-size:11px;">키워드 없음</span>';
+
+        // 3. 데이터 팩 및 이미지 프롬프트 프리뷰
+        const dataPackEl = document.getElementById('modalDataPack');
+        if (dataPackEl) dataPackEl.textContent = data.dataPack || '';
+        
+        const imgPromptEl = document.getElementById('modalImagePrompt');
+        if (imgPromptEl) imgPromptEl.textContent = data.imagePrompt || '이미지 프롬프트 생성 대기중';
+
+        modalLoading.style.display = 'none';
+        modalContent.style.display = 'block';
+        modalFooter.style.display = 'flex';
+
+    } catch (e) {
+        modalLoading.innerHTML = `
+            <div style="color:var(--red);padding:20px 0;">
+                <p>❌ 상위 블로그 데이터 분석 중 오류가 발생했습니다.</p>
+                <p style="font-size:12px;color:var(--text2);margin-top:6px;">${e.message}</p>
+                <button onclick="closeAnalysisModal()" style="margin-top:14px;padding:6px 16px;background:var(--bg3);color:#fff;border:1px solid var(--border);border-radius:6px;cursor:pointer;">닫기</button>
+            </div>
+        `;
+    }
+}
+
+function closeAnalysisModal() {
+    document.getElementById('analysisModal').classList.remove('active');
+}
+
+function copyDataPackOnly() {
+    if (!currentAnalysisData || !currentAnalysisData.dataPack) return;
+    navigator.clipboard.writeText(currentAnalysisData.dataPack).then(() => {
+        alert('📋 젬스 전송용 데이터 팩이 클립보드에 복사되었습니다!');
+    });
+}
+
+// 토스트 알림 표시기
+function showToast(message) {
+    let toast = document.getElementById('dashboardToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'dashboardToast';
+        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.95);color:#fff;border:1px solid var(--accent);padding:10px 20px;border-radius:8px;font-size:13px;z-index:999999;box-shadow:0 10px 25px rgba(0,0,0,0.6);transition:all 0.3s;pointer-events:none;';
+        document.body.appendChild(toast);
+    }
+    toast.innerHTML = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+    }, 3500);
+}
+
+// 🎨 이미지 프롬프트 전체 복사 기능 (버튼 자체 피드백 + 토스트 알림)
+function copyImagePromptOnly() {
+    if (!currentAnalysisData || !currentAnalysisData.imagePrompt) return;
+    
+    const btn = document.getElementById('btnCopyImgPrompt');
+    const originalText = btn ? btn.innerHTML : '📋 전체 복사';
+
+    navigator.clipboard.writeText(currentAnalysisData.imagePrompt).then(() => {
+        if (btn) {
+            btn.innerHTML = '✅ 복사완료!';
+            btn.style.background = '#10b981';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+        showToast('🎨 <strong>전체 5개(썸네일 1개 + 본문 4개)</strong> 이미지 프롬프트가 복사되었습니다!');
+    }).catch(() => {
+        prompt('아래 이미지 프롬프트를 복사하세요:', currentAnalysisData.imagePrompt);
+    });
+}
+
+// 🎯 개별 번호(1, 2, 3, 4, 5) 이미지 프롬프트 원클릭 복사 기능
+function copySingleImagePrompt(num) {
+    if (!currentAnalysisData) return;
+    
+    // imagePromptsList가 있으면 해당 항목, 없으면 텍스트 파싱
+    let targetPrompt = '';
+    let promptTitle = `${num}번 프롬프트`;
+
+    if (currentAnalysisData.imagePromptsList && currentAnalysisData.imagePromptsList[num - 1]) {
+        const item = currentAnalysisData.imagePromptsList[num - 1];
+        targetPrompt = item.prompt;
+        promptTitle = `${item.name}`;
+    } else if (currentAnalysisData.imagePrompt) {
+        // 백업 파싱 로직
+        const regex = new RegExp(`■\\s*${num}\\.[\\s\\S]*?Prompt:\\s*([^\\n]+)`, 'i');
+        const match = currentAnalysisData.imagePrompt.match(regex);
+        if (match && match[1]) {
+            targetPrompt = match[1].trim();
+        } else {
+            targetPrompt = currentAnalysisData.imagePrompt;
+        }
+    }
+
+    if (!targetPrompt) {
+        showToast(`⚠️ ${num}번 이미지 프롬프트를 찾을 수 없습니다.`);
+        return;
+    }
+
+    const btn = document.getElementById(`btnImgNum${num}`);
+    navigator.clipboard.writeText(targetPrompt).then(() => {
+        if (btn) {
+            btn.classList.add('copied');
+            const originalText = btn.textContent;
+            btn.textContent = '✓';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.textContent = originalText;
+            }, 1800);
+        }
+        showToast(`🎨 <strong>[${promptTitle}]</strong> 프롬프트가 복사되었습니다! Gemini에 Ctrl+V 하세요.`);
+    }).catch(() => {
+        prompt(`${num}번 이미지 프롬프트:`, targetPrompt);
+    });
+}
+
+// 🚀 젬스로 글작성 시작 (팝업 차단 방지를 위해 즉시 창 열기 + 클립보드 복사)
+function executeGemsWrite() {
+    if (!currentAnalysisData || !currentAnalysisData.dataPack) return;
+
+    const select = document.getElementById('modalGemsSelect');
+    const selectedIdx = select.value;
+    const selectedGem = userGems[selectedIdx] || { name: 'Gemini', url: 'https://gemini.google.com/app' };
+
+    // 1. 브라우저 팝업 차단 방지를 위해 즉시 새 탭 오픈
+    const newTab = window.open(selectedGem.url, '_blank');
+
+    // 2. 데이터 팩 클립보드 복사 & 부드러운 토스트 안내
+    navigator.clipboard.writeText(currentAnalysisData.dataPack).then(() => {
+        showToast(`✅ [${selectedGem.name}]로 이동했습니다! Ctrl+V로 붙여넣기 하세요.`);
+    }).catch(() => {
+        showToast(`✅ [${selectedGem.name}] 창이 열렸습니다.`);
+    });
+}
+
+// 🌐 다른 AI 플랫폼(ChatGPT, Grok, Claude) 슬라이스 실행
+function executeOtherAiWrite(aiUrl) {
+    if (!currentAnalysisData || !currentAnalysisData.dataPack) return;
+
+    let aiName = 'AI 플랫폼';
+    if (aiUrl.includes('chatgpt')) aiName = 'ChatGPT';
+    else if (aiUrl.includes('grok')) aiName = 'GROK';
+    else if (aiUrl.includes('claude')) aiName = 'Claude';
+
+    const newTab = window.open(aiUrl, '_blank');
+
+    navigator.clipboard.writeText(currentAnalysisData.dataPack).then(() => {
+        showToast(`✅ [${aiName}]로 이동했습니다! Ctrl+V로 붙여넣기 하세요.`);
+    }).catch(() => {
+        showToast(`✅ [${aiName}] 창이 열렸습니다.`);
+    });
+}
+
+function searchNaver(keyword) {
+    window.open(`https://search.naver.com/search.naver?query=${encodeURIComponent(keyword)}`, '_blank');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+let latestKeywords = [];
+
+// 지인 공유 링크 복사
+function copyShareUrl() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+        alert(`✅ 대시보드 주소가 복사되었습니다!\n\n${url}\n\n지인에게 이 링크를 보내주시면 지인도 바로 동일한 트렌드를 보실 수 있습니다.`);
+    }).catch(() => {
+        prompt('아래 링크를 복사하여 지인에게 공유하세요:', url);
+    });
+}
+
+// 전체 키워드 복사 (메모장/노션용)
+function copyAllKeywords() {
+    if (!latestKeywords || latestKeywords.length === 0) {
+        alert('복사할 키워드가 없습니다. 먼저 데이터 수집을 해주세요.');
+        return;
+    }
+
+    const text = latestKeywords.map((k, idx) => `${idx + 1}. ${k.keyword} (${k.source})`).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+        alert(`✅ ${latestKeywords.length}개 트렌딩 키워드가 클립보드에 복사되었습니다!\n메모장이나 블로그 작성창에 바로 붙여넣기(Ctrl+V) 하세요.`);
+    }).catch(() => {
+        prompt('아래 키워드를 복사하세요:', text);
+    });
+}
+
+// 초기 자동 새로고침 설정 (5분)
+setAutoRefresh(300);
+
+// 페이지 로드 시 자동 수집
+window.addEventListener('load', () => {
+    setTimeout(collectAll, 500);
+});
+</script>
+
+</body>
+</html>

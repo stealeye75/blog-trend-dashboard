@@ -1,0 +1,17 @@
+{
+  "name": "blog-trend-dashboard",
+  "version": "1.0.0",
+  "description": "블로그 트렌드 키워드 수집 및 분석 대시보드",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.21.0",
+    "cheerio": "^1.2.0",
+    "express": "^4.22.3",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.64.1"
+  }
+}
